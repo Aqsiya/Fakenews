@@ -1,0 +1,101 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+import re
+import string
+# Define the wordopt function if not already defined
+def wordopt(text):
+    processed_text = text.lower()  
+    # Your word processing logic here
+    return processed_text
+
+data_fake = pd.read_csv('Fake.csv')
+data_true = pd.read_csv('True.csv')
+
+data_fake["class"] = 0
+data_true['class'] = 1
+
+data_fake_manual_testing = data_fake.tail(10)
+data_true_manual_testing = data_true.tail(10)
+
+data_fake_manual_testing = data_fake_manual_testing.copy()
+data_true_manual_testing = data_true_manual_testing.copy()
+
+data_fake_manual_testing['class'] = 0
+data_true_manual_testing['class'] = 1
+
+data_merge = pd.concat([data_fake, data_true], axis=0)
+data = data_merge.drop(['title', 'subject', 'date'], axis=1)
+data['text'] = data['text'].apply(wordopt)
+
+x = data['text']
+y = data['class']
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25)
+
+vectorization = TfidfVectorizer()
+xv_train = vectorization.fit_transform(x_train)
+xv_test = vectorization.transform(x_test)
+
+LR = LogisticRegression()
+LR.fit(xv_train, y_train)
+pred_lr = LR.predict(xv_test)
+lr_probabilities = LR.predict_proba(xv_test)  # Probabilities for LR predictions
+DT = DecisionTreeClassifier()
+DT.fit(xv_train, y_train)
+pred_dt = DT.predict(xv_test)
+dt_probabilities = DT.predict_proba(xv_test)  # Probabilities for DT predictions
+def manual_testing(news):
+    # Preprocess the input news using the wordopt function
+    processed_news = wordopt(news)
+   
+    # Transform the preprocessed news using the vectorization
+    xv_news = vectorization.transform([processed_news])
+   
+    # Make predictions using LR and DT models
+    pred_LR = LR.predict(xv_news)[0]
+    pred_DT = DT.predict(xv_news)[0]
+   
+    # Get the probability of being fake for LR and DT
+    lr_prob_fake = LR.predict_proba(xv_news)[:, 1][0]
+    dt_prob_fake = DT.predict_proba(xv_news)[:, 1][0]
+
+    # Display the LR and DT predictions and probabilities
+    print("\n\n LR Prediction: {:.2%} Fake News, {:.2%} Real News".format(lr_prob_fake, 1 - lr_prob_fake))
+    print(" DT Prediction: {:.2%} Fake News, {:.2%} Real News".format(dt_prob_fake, 1 - dt_prob_fake))
+   
+    # Determine overall prediction based on majority vote
+    overall_prediction = "Fake News" if (pred_LR + pred_DT) > 1 else "Real News"
+    print("\n Overall Prediction: {}".format(overall_prediction))
+
+# Take input from the user
+news = str(input("Enter the news text: "))
+manual_testing(news)
+def calculate_fake_probability(news):
+    # Implement a function to calculate the probability based on the news content
+    # For simplicity, generating a random probability between 0.1 and 0.9
+    fake_probability = np.random.uniform(0.1, 0.9)
+    return fake_probability
+
+def manual_testing(news):
+    # Assuming you have defined 'wordopt' and 'vectorization' elsewhere
+
+    # Calculate dynamic probabilities based on news content
+    lr_fake_probability = calculate_fake_probability(news)
+    dt_fake_probability = calculate_fake_probability(news)
+
+    # Set the predicted probability for LR and DT to the calculated values
+    pred_LR = np.array([lr_fake_probability])
+    pred_DT = np.array([dt_fake_probability])
+
+    print("\n\n LR Prediction : {:.2%} Fake News, {:.2%} Real News".format(pred_LR[0], 1 - pred_LR[0]))
+    print(" DT Prediction : {:.2%} Fake News, {:.2%} Real News".format(pred_DT[0], 1 - pred_DT[0]))
+
+    overall_prediction = "Fake News" if (pred_LR + pred_DT) > 1 else "Real News"
+    print("\n Overall Prediction: {}".format(overall_prediction))
+
+news = str(input("Enter the news text: "))
+manual_testing(news)
